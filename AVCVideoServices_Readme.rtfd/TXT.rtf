@@ -1,0 +1,169 @@
+{\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf420
+{\fonttbl\f0\fnil\fcharset77 LucidaGrande;\f1\fnil\fcharset77 LucidaGrande-Bold;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww15380\viewh13660\viewkind0
+\pard\tx0\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\li720\ri-1440\ql\qnatural
+
+\f0\fs24 \cf0 Copyright \'a9 2000-2007 Apple Computer, Inc.  All Rights Reserved.\
+\
+\pard\tx0\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\li720\ri-1440\ql\qnatural
+
+\f1\b\fs36 \cf0 AVCVideoServices and Related Example Applications\ul \
+\pard\tx0\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\li720\ri-1440\ql\qnatural
+
+\f0\b0\fs24 \cf0 \ulnone \
+\pard\tx0\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\li720\ri-1440\ql\qnatural
+
+\f1\b \cf0 What's new for AVCVideoServices in FireWire SDK 25\
+\
+	
+\f0\b0 For a comprehensive list of differences in AVCVideoServices between the one that was contained in FireWireSDK 23 & 24 (AVCVideoServices-36), and the one contained in this SDK (AVCVideoServices-41), please refer to the ReleaseNotes.rtf file in the AVCVideoServices source directory. There have been many bug fixes and features added to existing AVCVideoServices objects in this release. \
+\
+Some new highlights of this latest release of AVCVideoServices include:\
+\
+	1) 
+\f1\b 64-bit Support:
+\f0\b0  AVCVideoServices frameworks can now be built 4-way universal on Leopard systems, to support 32-bit and 64-bit clients for both PPC and Intel architectures.\
+\
+	2) 
+\f1\b UniversalTransmitter:
+\f0\b0  Added a new generic isochronous transmitter class object, which can be used to easily generate almost any type of isochronous stream. Added CreateUniversalTransmitter(...), and DestroyUniversalTransmitter(...) to FireWireUniversal.h. Also, added CreateUniversalTransmitterForDevicePlug(...) to the AVCDevice object. Note that this new UniversalTransmitter functionality is not currently exposed in the FWAVC wrapper APIs. Added UniversalTransmitTest command-line test app for the UniversalTransmitter. Also, added FWA_IORemapper, a class object which uses the UniversalTransmitter in conjunction with the UniversalReceiver to remap audio signals in a FireWire audio stream.\
+\
+	3) 
+\f1\b MusicSubunitController:
+\f0\b0  The MusicSubunitController class object does extensive parsing of descriptors from Music Subunit based devices, as well as discovers the internal plug-routing, and support stream formats. All the information gathered on capabilities of the device are converted to a XML plist file. \
+\
+
+\f1\b Introduction to the AVCVideoServices project\
+\pard\tx0\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\pardeftab720\li720\ri-1440\ql\qnatural
+
+\f0\b0 \cf0 \
+	AVCVideoServices (or AVS, for shorthand) is a user-mode framework, which supports transmission and reception of all modes of DV, as well as MPEG2-TS streams over FireWire, as defined by the IEC-61883 specifications. It also provides device discovery, and stream-format capability analysis of devices connected to the FireWire bus, which conform to the AV/C command protocol, as defined by the 1394 trade association. \
+\
+	In addition, AVCVideoServices provides virtual AV/C subunit implementations for Tape subunit, and Music subunit, and a higher-level API for VirtualDVHS functionality. With these portions of AVS, it is relatively easy for developers to create custom versions of VirtualDVHS, or add DVHS emulation technology to their applications.\
+\
+	AVCVideoServices.framework is provided as an alternative to the existing DVFamily.bundle, and IsochronousDataHandler components, which, besides the fact that neither of these existing modules supports MPEG2-TS, or DVCProHD stream formats, have a number of other shortcomings that make them less desirable APIs than what is provided by the AVCVideoServices.framework. \
+\
+	However, the addition of AVCVideoServices.framework doesn't mean we no longer support the DVFamily.bundle and IsochronousDatahHandler components provided with Mac OS-X. They are still needed for backward compatibility with existing applications. The AVCVideoServices.framework can co-exist with these other DV support modules provided by the OS, and these older modules will remain part of the OS as long as necessary to support older applications. \
+\
+	In addition, developers should look into the higher-level APIs provided by QuickTime (such as the QuickTimeDV sequence-grabber, or QTKit APIs). If you are working on a project that only needs DV25 or DV50 support, the QT APIs may be a better solution for your project then using the lower-level APIs of AVCVideoServices. Advantages to using QuickTime over AVCVideoServices include direct access to the codec, preview, and QT file-writing capabilities provided by QuickTime.\
+\
+	The AVCVideoServices framework, implemented in C++, includes classes that provide the device discovery and control functionality, classes that provide the MPEG-2 and DV transmitter and receiver functionality, as well as helper functions that simplify the usage of these classes, by encapsulating the creation of dedicated threads, instantiating the objects, and performing the initial setup of these objects. Cleanup helper functions are provided as well.\
+\
+	The AVCVideoServices.framework is a super-set of the APIs provided by the existing FireWireMPEG.framework, which was included in a previous FireWire SDK, and is currently being used by a number of developers as a "private" framework in their applications. Minor changes may need to be done to existing applications based on FireWireMPEG.framework in order to port them to use AVCVideoServices.\
+\
+	A number of command-line test applications are provided as part of the AVCVideoServices project source. Most of these simple applications exist for the sole purpose of testing the various AVS class-objects, and don\'d5t necessarily provide a comprehensive (or even typical) usage of the various APIs that the AVS class objects support. \
+\
+	The main class objects provided by the AVCVideoServices.framework are as follows:\
+\
+\pard\tx0\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\pardeftab720\li720\ri-1440\ql\qnatural
+
+\f1\b \cf0 	AVCDeviceController:
+\f0\b0  The object that receives OS notifications for arrival and removal of AV/C devices, and maintains an array of AVCDevice objects, one for each AV/C device it has discovered. It provides a callback to identify when changes to its array of AVCDevice objects occur. \
+\
+
+\f1\b 	AVCDevice:
+\f0\b0  The object, which represents a unique AVC device. This object can be used to open/close the device, send AV/C commands to the device, and manage streams to and from the device.	\
+\
+
+\f1\b 	TapeSubunitController:
+\f0\b0  A higher-level object, which simplifies the control of AVCDevice\'d5s with AV/C tape-subunits.\
+\
+
+\f1\b 	PanelSubunitController:
+\f0\b0  A higher-level object, which simplifies the tuning-control of cable set-top-boxes. \
+\
+
+\f1\b 	MusicSubunitController:
+\f0\b0  A higher-level object, which simplifies the parsing of subunit descriptors, internal-routing, and stream-format detection for AV/C devices containing a Music subunit. \
+\
+
+\f1\b 	DVTransmitter:
+\f0\b0  The object that implements the DV transmission functionality.\
+\
+
+\f1\b 	DVReceiver:
+\f0\b0  The object that implements the DV receive functionality.\
+\
+
+\f1\b 	MPEG2Transmitter:
+\f0\b0  The object that implements the MPEG2-TS transmission functionality.\
+\
+
+\f1\b 	MPEG2Receiver:
+\f0\b0  The object that implements the MPEG2-TS receive functionality.\
+\
+
+\f1\b 	UniversalReceiver:
+\f0\b0  The object that implements the generic isoch receive functionality.\
+\
+
+\f1\b 	UniversalTransmitter:
+\f0\b0  The object that implements the generic isoch transmission functionality.\
+\
+	
+\f1\b FWA_IORemapper:
+\f0\b0  A class object which uses the UniversalTransmitter in conjunction with the UniversalReceiver to remap audio signals in a FireWire audio stream.\
+\
+
+\f1\b 	TSDemuxer:
+\f0\b0  The object that can demultiplex an MPEG2-TS stream, taking in MPEG2 transport stream packets, and providing demultiplexed audio and video PES packets. \
+\
+
+\f1\b 	DVFramer:
+\f0\b0  The object is similar to the TSDemuxer, but is for DV formats instead of MPEG format. It is designed to be used with the UniversalReceiver to accumulate DV source-packets into DV frames.\
+\
+
+\f1\b 	VirtualTapeSubunit:
+\f0\b0  An implementation of a generic virtual AV/C tape subunit.\
+\
+
+\f1\b 	VirtualMPEGTapePlayerRecorder:
+\f0\b0  An object that uses VirtualTapeSubunit, MPEG2Transmitter, and MPEG2Receiver to implement VirtualDVHS type functionality.\
+\
+
+\f1\b 	VirtualMusicSubunit:
+\f0\b0  An implementation of a virtual AV/C music subunit. This class object can be used within an application to have the Macintosh emulate a multi-channel FireWire break-out box with bidirectional audio and MIDI streaming support.\
+\
+Please refer to the 
+\f1\b AVCVideoServices.doc
+\f0\b0  file (contained in the AVCVideoServices project directory) for more detailed documentation on how to use this new framework. But, note that some new APIs (just a few) have been recently added to various AVCVideoServices class objects that has not yet been documented in 
+\f1\b AVCVideoServices.doc. 
+\f0\b0 So, you may need to refer to both the documentation and  the class object header-files to uncover some of these new features. \
+\pard\tx0\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\li720\ri-1440\ql\qnatural
+\cf0 \
+\pard\tx0\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\li720\ri-1440\ql\qnatural
+
+\f1\b \cf0 About the Example Projects based on AVCVideoServices.framework\
+\pard\tx0\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\li720\ri-1440\ql\qnatural
+
+\f0\b0 \cf0 \
+	This SDK contains the following five example projects which use AVCVideoServices as as private framework bundled with the application:\
+\
+\pard\tx0\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\li720\ri-1440\ql\qnatural
+
+\f1\b \cf0 	AVCBrowser2:
+\f0\b0  New to FireWire SDK 23 (the previous major FireWire SDK release), is a completely rewritten implementation of AVCBrowser, which uses AVCVideoServices.framework for AV/C device discovery, and control. This application provides an example of how to use the AVCDeviceController and AVCDevice objects to discover and control AV/C devices. The new tab-based user-interface on the device control panels includes many additional device control capabilities such as a tape-subunit controller, and a CEA-931 compatible panel-subunit remote control. New to the FireWire SDK 25 version of AVCBrowser2 include a tab for Music Subunit based devices, and the ability to receive a stream from a MPEG-2 device (such as a cable STB), and pipe it over to an open-source media player for real-time viewing.\
+\
+
+\f1\b 	VirtualDVHS2:
+\f0\b0  This example application uses the VirtualMPEGTapePlayerRecorder functionality from AVCVideoServices to emulate a DVHS device within the Mac. As you will see by examining the source to this project, almost all the AV/C command handling and MPEG2-TS streaming functionality of this application exists in  the AVCVideoServices.framework, and all that remains in this application's source is the user-interface implementation. This application provides a much more "compliant" implementation of an AV/C tape-subunit than what exists in the original version of VirtualDVHS, and works with a wider array of DTVs and STBs than the original  version. In addition, this new version supports accurate time-code generation, and TV-remote driven (or GUI driven) random-navigation during playback (TV remote's fast-forward button does a 30-second skip forward, and the fast-reverse button does a 15-second skip backwards). The accurate time-code and random-access capabilities are possible due to the addition of a navigation-data file (with the extension of .tsnavi) that is created in real-time when recording with VirtualDVHS2. When opening an existing MPEG2-TS stream that doesn't have a corresponding .tsnavi file, VirtualDVHS2 will offer to create one (or allow the user to continue without .tsnavi information). If no .tsnavi file is created for an existing MPEG2-TS stream, playback is still possible, but all time-code and random-access capabilities are disabled. Note that this new version of VirtualDVHS2 has extensive AppleScript support. Use the Script Editor's "Open Dictionary" to view VirtualDVHS2's Applescript capabilities. 
+\f1\b NOTE: 
+\f0\b0 Please understand that VirtualDVHS (and the other AVCVideoServices based applications that are part of the FireWire SDK) are provided as samples to help developers understand how to use the Mac OS-X FireWire and AVCVideoServices APIs, and are not full-featured, bug-free applications provided by Apple for end-user use. \
+\
+
+\f1\b 	VirtualDV:
+\f0\b0  This sample application uses the FireWireDV portions of AVCVideoServices.framework for DV streaming. It is a DV deck emulator (supporting DV25 through DVCProHD, NTSC and PAL). It is very similar to a real-deck (supporting all trick-mode playback options), and is useful for testing applications such as FinalCutPro (with all it's insert-edit, scrubbing, etc.). Note that it only reads and writes raw DV DIF-stream files, not QuickTime wrapped DV files. Also, note that all the "virtual-tape-subunit" functionality is handled directly by code in this app (in a somewhat messy manner), instead of using the newer, cleaner virtual tape implementation provided in AVCVideoServices.framework. The application has a couple of different time-code options, controlled via a GUI selection box. "Insertion" mode means that time-code for a frame is generated based on the position of the frame in the file (starting with 00:00:00.00), and is inserted into the DV frame data when transmitted over FireWire by VirtualDV. "Extraction" mode means that VirtualDV extracts time-code information from the frame-data during transmission, and adjusts its responses to AVC tape-subunit time-code commands to match the time-code of the frames. "None" mode does neither of these two other functions, so there is no guarantee that time-code in the frames matches AV/C time-code command responses. For working with FinalCutPro, the default mode of "Insertion" is probably best, but there are some cases where "Extraction" mode can be useful.\
+\
+
+\f1\b 	AVCVideoCap:
+\f0\b0  This new sample application shows one method of using the AVCDeviceController and AVCDevice objects from AVCVideoServices.framework, as well as the MPEG2Receiver and DVReceiver objects. It is an application that supports stream capture from AV/C tape devices (both DV and MPEG), and MPEG AV/C tuner devices (such as cable set-top-boxes). For capture from a cable set-top-box, the user can specify a start-time, a duration, and a channel-change (if the STB supports Panel-subunit based channel-change commands). For capture from a DV camcorder, AVCVideoCap will rewind the tape, start playback, and capture from the device until 10 seconds elapse with no new frame-data (end of recorded portion of the tape).\
+\
+
+\f1\b 	DVHSCap:
+\f0\b0  This version of DVHSCap is similar to the version from FireWire SDK 19, but it has been ported to use AVCVideoServices.framework instead of FireWireMPEG.framework. It uses the AVCDeviceController, AVCDevice, and the MPEG2-TS transmitter/receiver objects from AVCVideoServices.framework to implement import and export capabilities for DVHS and HDV devices.\
+\
+\
+[end]\
+July 19, 2007\
+}

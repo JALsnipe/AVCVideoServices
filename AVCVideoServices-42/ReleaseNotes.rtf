@@ -1,0 +1,719 @@
+{\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf420
+{\fonttbl\f0\fswiss\fcharset77 Helvetica;\f1\fnil\fcharset77 Monaco;}
+{\colortbl;\red255\green255\blue255;\red19\green34\blue255;\red104\green56\blue33;}
+\margl1440\margr1440\vieww20140\viewh14240\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+
+\f0\fs24 \cf0 ------------------------------------------------\
+AVCVideoServices Release History\
+------------------------------------------------\
+\
+Release 8/04/07\
+-----------------------\
+\
+1) Changed how AVCDevice::discoverAVCDeviceCapabilities() works. In previous AVS releases, AVCDevice::discoverAVCDeviceCapabilities() would attempt to open\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+\cf0 an avcinterface (and fwdeviceinterface) prior to sending the AV/C commands used  to discover the subunits, stream-formats, etc. supported by an AVCDevice.\
+If AVCDevice::discoverAVCDeviceCapabilities() was unable to open the device (in the case where it was already opened by another component or app), it would\
+defer the capabilies discovery process, until some time in the future when it received a kIOMessageServiceWasClosed message, at which time it would try again\
+to open the device. With this newest AVS code modification, AVCDevice::discoverAVCDeviceCapabilities() no longer opens the avcinterface and fwdeviceinterface.\
+Instead, it creates an instance of an AVCDeviceCommandInterface object for the AVCDevice, which allows for sending AVCCommands to a device without the need to\
+open it first. The advantage of this change is that the capabilites of an AVCDevice can be determined, even if the device is already opened by another process.\
+Also, fewer open/close operations will reduce device contention during hotplug operations, speed up discovery, and reduce the number of open/close messages \
+generated to the clients. The only disadvantage to this change is that, if a specific AVCDevice doesn't support the unit-level PLUG_INFO command, then\
+AVCDevice::discoverAVCDeviceCapabilities() can no longer determine how many isoch in plugs and isoch out plugs the device reports to contain, since the alternative\
+to using the  PLUG_INFO command, is to read the oMPR/iMPR registers with quadlet-read opperations, which cannot be done without opening the fwdevicinterface first.\
+So, now if the PLUG_INFO command fails, AVCDevice::discoverAVCDeviceCapabilities() will set numInputPlugs and numOutputPlugs each to zero. Along with this change,\
+I'v made the AVCDevice object's member function "getIsochPlugCount()" public. So, if an AVS client sees that the numInputPlugs and numOutputPlugs parameters of an\
+AVCDevice are both zero, it can call getIsochPlugCount() on the device (after opening the device), which will update these parameters using the data retrieved from\
+reading the oMPR/iMPR registers. Note that one additional benefit of this change is that AVCDevice::discoverAVCDeviceCapabilities(), and/or\
+FWAVCDeviceReDiscoverAVCDeviceCapabilities() can now be called by an AVS client whether or not the device is opened by the client (previously, the client could\
+only call these function when the device was in a closed state (or it would fail).\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+\cf0 \
+2) This is AVCVideoServices-42.\
+\
+Release 7/18/07\
+-----------------------\
+\
+1) For all six streaming objects (DV, MPEG, and Universal versions of transmitter and receiver objects), we now post a kFWAVCStreamDCLOverrunAutoRestartFailed message\
+\pard\pardeftab720\ql\qnatural
+\cf0 if we are unable to restart the DCL program in the DCLOverrun handler.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+\cf0 \
+2) Added FWA_IORemapper class object to the AVCVideoServices.framework. This new class object uses the UniversalReceiver and UniversalTransmitter modules to implement 61883-6 audio stream remapping, where an incoming isoch audio stream is received, and a new isoch audio-out stream is generated that can have a different audio/MIDI signal count and signal order, and is delayed by 4 msec from the original incoming stream. Also added FWA_IORemapperTest, a command-line application that shows a sample usage of the FWA_IORemapper object.\
+\
+3) This is AVCVideoServices-41, expected to be part of FireWire SDK 25.\
+\
+Release 6/1/07\
+-----------------------\
+\
+1) For FWAVC framework, added new API FWAVCTSDemuxerCreateWithPIDs(...), to expose the manual PID selection construction method of the TSDemuxer class object to the C-only FWAVC framework.\
+\
+2) Added a new generic isochronous UniversalTransmitter class object. Added CreateUniversalTransmitter(...), and DestroyUniversalTransmitter(...) to FireWireUniversal.h. Also, added CreateUniversalTransmitterForDevicePlug(...) to the AVCDevice object. Note that this new UniversalTransmitter functionality is not currently exposed in the FWAVC wrapper APIs.\
+\
+3) Added UniversalTransmitTest command-line test app for the UniversalTransmitter. Also, added FWA_IORemapper test app which shows a use of the UniversalTransmitter in conjunction with the UniversalReceiver to remap audio signals in a FireWire audio stream.\
+\
+4) Made some changes to the VirtualMusicSubunit, to allow build-time disabling of the MIDI stream support.\
+\
+5) This is AVCVideoServices-40.\
+\
+Release 4/5/07\
+-----------------------\
+\
+1) For building AVCVideoServices.framework, changed the build script for internal "Embedded" build styles to use ditto instead of pbxcp.\
+\
+2) Added two new build styles, Development-4WayUniversal and Deployment-4WayUniversal, for building 4-way FAT on Leopard.\
+\
+3) Made a change to the streaming object's calls to AllocateCallProcDCL(...) to support building on both Leopard and Tiger. In Tiger, the refcon for this call is a UInt32. On Leopard it is a DCLCallProcDataType (which resolves to UInt32 on 32-bit builds, UInt64 on 64-bit builds). Defined DCLCallProcDataType as UInt32 if not previously defined (i.e. on Tiger).\
+\
+4) This is AVCVideoServices-39.\
+\
+Release 3/5/07\
+-----------------------\
+\
+1) Renamed the FWAVC.framework to FWAVCPrivate.framework. No API name changes were made.\
+\
+2) Added an export list, used when building the FWAVCPrivate.framework.\
+\
+3) Added "makerCode" and "imagingFrameRate" detection/reporting to the HDV2 V-Aux callback data-structure. These parameters are detected (if present) in a DV multi-pack beyond the other HDV2 V-Aux data.\
+\
+4) More improvements to the MusicSubunitController module. Code now builds a CF-based dictionary containing all the information gathered during device capability discovery.\
+\
+5) For PSITables, added a new public API, selectProgram(...), which specifies the program-index in the PAT program-list for the program of interest. The default program-index parameter is 1, (the same as it has always been), specifying the first non-zero program in the PAT program-list.\
+\
+6) For the TSDemuxer, fixed a problem where the programNum parameter wasn't being used (in auto-PSI detection mode). Now, the TSDemuxer can be used to demux other programs besides the first one in the PAT program-list.\
+\
+7) Improvements to MPEGTrickModes, MPEG2Transmitter, and TSDemuxerTest, to improve robustness when dealing with PID-filtered MPEG2 streams from certain TVs. \
+\
+8) This is AVCVideoServices-38.\
+\
+Release 11/15/06\
+--------------------------\
+\
+1) For the MPEG2Transmitter object, added the ability for a client to register for time-stamp callbacks which provide the (future) CPU up-time clock value for the transmission time of packets that contain PCRs. \
+\
+2) In the MPEGTransmitTest command-line test app, added conditional build code (disabled by default) for testing the new MPEG2Transmitter time-stamp reporting feature.\
+\
+3) Added FWAVCMPEG2TransmitterSetTimeStampCallback(...) function to FWAVC.framework, in order to provide support for the new MPEG2Transmitter time-stamp reporting feature to users of this C-only framework.\
+\
+4) For the DVTransmitter, reduced the SYT offset for DV25 streams from 3 to 2, in order to improve reliablilty with older DV camcorders such as the Sony TRV-900. This change brings the AVS DVTransmitter in line with the existing IOFWDVComponents SYT offset value.\
+\
+5) For AVCDeviceCommandInterface object, added GetAVCDevice(...) as a public member function. This new API returns a pointer to the underlying AVCDevice object used to create the AVCDeviceCommandInterface instance. Also, we now make a call to deactivateAVCDeviceCommandInterface() in the AVCDeviceCommandInterface destructor, if needed, in the case where the client forgot to call it prior to deleting the object instance.\
+\
+6) Fixed up the info plist for the FWAVC framework. It was missing CFBundleShortVersionString, and had some default values for some of the other parameters.\
+\
+7) In PSITables object, we now save the video and audio stream-types in primaryProgramVideoStreamType, and primaryProgramAudioStreamType public member variables. Also, added 0x1B stream_type to the list of recognized video stream types (for AVCHD H.264 video). And, PSITables now deletes existing PMT descriptors when ResetPSITables() is called. \
+\
+8) In FWAVC.framework, added new FWAVCTSDemuxerGetPMTInfo(...) function to give clients access to the stream types, and PMT descriptors. \
+\
+9) In TSDemuxerTest test-app, added conditional build capability to support parsing AVCHD (or BD) streams which have 192 bytes for each transport stream packet (instead of the usual 188). Disabled by default.\
+\
+10) In VirtualTapeSubunit, added support to handle the D-VHS "vendor-unique" commands defined in the 1394TA D-VHS guidelines specification.\
+\
+11) In the VirtualMusicTest test-app, provided a ctrl-C exit handler which does proper clean-up, since the current AppleFWAudio will leak resources if we don't clean them up on exit.\
+\
+12) For the TSPacket object, added a 64-bit "pcr" member variable, which can be used as an alternative to the existing pcr_base_high, pcr_base_low, and pcr_ext member variables.\
+\
+13) For the StringLogger logging object, added a new alternative constructor that lets the client pass in a refcon pointer which is returned in the log-string callbacks.\
+\
+14) For AVCDevice class object, added "hasMusicSubunit", and "hasAudioSubunit" member variables.\
+\
+15) Added a new MusicSubunitController object, which will eventually support full capability discovery and control of AV/C music subunit based devices. Still a work in progress. \
+\
+17) This is AVCVideoServices-37.\
+  \
+Release 9/14/06\
+--------------------------\
+\
+1) In VirtualMPEGTapePlayerRecorder.cpp, did a different implementation of the fix made in AVCVideoServices-35, regarding a crash that would occur on a Japanese-language install of OS-X (or other unicode-based language version) when generating a file-name for a new recording file. This newer implementation is better than the one done in AVCVideoServices-35. \
+\
+2) This is AVCVideoServices-36.\
+\
+Release 9/12/06\
+--------------------------\
+\
+1) Fixed a bug where, for a given AVCDevice, if the client simultaneously calls AVCDevice::openDevice() on different threads, or simultaneously calls AVCDevice::openDevice() and AVCDevice:discoverAVCDeviceCapabilities() on different threads, the AVCDevice could lose its pointer to an open IOFireWireAVCLibUnit interface, preventing the client from ever successfully opening the device again (until the app quits, and the "lost" IOFireWireAVCLibUnit instance is killed off via clientDied). Though open/close mutex protection already existed, there was a small hole that is now plugged with this change.\
+\
+2) For the UniversalReceiver, added a NuDCL implementation to the source-code that can be enabled for conditional-building. Currently this code is disabled, and the original, legacy DCL based UniversalReceiver, is built by default.\
+\
+3) Added GetDVModeFromFrameData(...) to AVCVideoServices.framework, and FWAVCGetDVModeFromFrameData(...) to FWAVC.framework. These new functions can analyze a portion of raw DV frame data, and determine the actual DV mode of the frame. They must be passed a pointer to the first 480 bytes of the raw DV frame data.\
+\
+4) For the PanelSubunitController, and TapeSubunitController, created alternate constructors, which let the client pass in an (activated) AVCDeviceCommandInterface instead of an (opened) AVCDevice. This now allows these two higher-level command APIs to be used by clients who are using AVCDeviceCommandInterface.\
+\
+5) For the recently introduced C-only FWAVC.framework, changed the following public API functions to allow the client to pass in a pointer to a function to receive debug logging messages: FWAVCDeviceControllerCreate(...), FWAVCDeviceCreateUniversalReceiver(...), FWAVCDeviceCreateMPEGReceiver(...), FWAVCDeviceCreateMPEGTransmitter(...), FWAVCDeviceCreateDVTransmitter(...), FWAVCDeviceCreateDVReceiver(...), FWAVCDVFramerCreate(...), and FWAVCTSDemuxerCreate(...).\
+\
+6) In VirtualMPEGTapePlayerRecorder.cpp, fixed a crash that would occur on a Japanese-language install of OS-X (or other unicode-based language version) when generating a file-name for a new recording file. \
+\
+7) This is AVCVideoServices-35.\
+\
+Release 7/11/06\
+--------------------------\
+\
+1) Fixed a bug in the recently introduced DVFramer class, that was causing a bogus refCon value to be passed to the client in the frame delivery callback, instead of the client specified value.\
+\
+2) Added a new target, FWAVC.framework, which provides a C-only wrapper API for many of the capabilities of AVCVideoServices.framework, including the AVCDeviceController, AVCDevice, all device-based stream objects (DV, MPEG, Universal), TSDemuxer, and DVFramer. It does not currently provide APIs for the virtual AVC target objects, the stand-alone stream objects, and some of the MPEG support objects (trick-modes, etc.). This framework should be usable in C, C++, objective-C, and objective-C++ based applications. The top-level header for this new framework is FWAVC.h, and the only other header needed to use these new APIs is the new AVSShared.h file, containing constants and structures that are shared between FWAVC.framework, and AVCVideoServices.framework. Note that this new framework should be considered only of beta-level quality, and not necessarily production ready. Also, these new APIs are still subject to change as needed. Complete documentation for this new framework can be generated by running headerdoc on FWAVC.h. Please provide details of any bugs you find with this new code so that we can resolve them quickly. Currently, this framework still builds expecting to be added to your application bundle's framework directory. \
+\
+3)  Added a new command-line test app, FWAVCDeviceTest, which uses some of the APIs provided by FWAVC.framework.\
+\
+4) Made various tweaks to the internals of some of the AVCVideoServices C++ objects in order to simplify the implementation of the FWAVC.framework. This release still provides source-level compatibility with existing code, but not binary compatibility. Some of the things that changed include: assigned the values of some existing enum constants to constants defined in the new AVSShared. file (some of the client callback message values may have changed, but the existing constant names are still usable by AVCVideoServices.framework clients), added another pointer to private data to the DVFramer's DVFrame structure, added a pointer to private data to the DVReceiver's DVReceiveFrame struct, added a pair of pointers to private data to the TSDemuxer's PESPacketBuf struct, and replaced some existing structures (\CocoaLigature0 UniversalReceiveCycleData, MPEGReceiveCycleData, CIPPacketParserInfo, TSDemuxerHDV2VideoFramePack, and TSDemuxerHDV1PackData\CocoaLigature1 ) with typedefs to similar (but newly named) structures defined in AVSShared.h. Users of AVCVideoServices.framework should continue to use constants defined in the various C++ class object header files, rather than the constants defined in AVSShared.h. Also, users of AVCVideoServices.framework C++ class objects may use the new private data pointers added to structures (described previously), as needed. \
+\
+5) This is AVCVideoServices-34.\
+\
+Release 6/15/06\
+--------------------------\
+\
+1) Added a new generic isochronous receiver module, that can be used for receiving any kind of isochronous stream. This includes the new UniversalReceiver object (defined in UniversalReceiver.h), as well as support APIs (defined in FireWireUniversal.h). The support APIs include CreateUniversalReceiver(...) and DestroyUniversalReceiver(...) which setup/teardown a UniversalReceiver object on a dedicated real-time thread (similar to what's provided in FireWireMPEG.h and FireWireDV.h). Also, FireWireUniversal.h includes a CIP parser for parsing IEC-61883 CIP-style isochronous packets. The main purpose of these new objects/APIs is to support capture from camcorders that can stream multiple-formats from a single tape (i.e. HDV and DV, or DVCProHD, DVCPro50, and DV25), but they can also be used for other useful things as well.\
+\
+2) For the AVCDevice object, added CreateUniversalReceiverForDevicePlug(...) API, which supports using the UniversalReceiver with the AVCDevice, with managed connection-managment, etc. This is similar to existing APIs for using the DVReceiver or MPEGReceiver with an AVCDevice.\
+\
+3) Added a new DVFramer module. This module is similar to the TSDemuxer object, but is for DV formats instead of MPEG format. It is designed to be used with the UniversalReceiver to accumulate DV source-packets into DV frames. The DV frame passing/releasing method is a lot like the existing DVReceiver APIs.\
+\
+4) Created two new command-line test apps for testing these new APIs and modules. IsochSnooper listens on all isochronous channels (sequentially) and prints out info on whatever streams it finds. UniversalReceiveTest shows how the UniversalReceiver, in conjunction with the TSDemuxer and DVFramer, can be used for capturing a mixed-format (DV/MPEG) stream. Also modified the AVCDeviceTest command-line app to utilize the the UniversalReceiver, in conjunction with the TSDemuxer and DVFramer, to show how to use the AVCDevice:: CreateUniversalReceiverForDevicePlug(...) API to capture a mixed format stream from a camcorder.\
+\
+5) For the TSDemuxer, added a new parameter to the PESPacketBuf structure, pClientPrivateData, for clients to use, to attach whatever private data it wants to these structures.\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+\cf0 6) This is AVCVideoServices-33.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+\cf0 \
+Release 5/11/06\
+--------------------------\
+\
+1) Fixed a problem in the TSDemuxer class that was preventing packet discontinuity detection from working. Now the TSDemuxer will properly notify the client when a discontinuity is detected in the increment of the continuityCounter field from the TS packet header, for video and audio PIDs.\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+\cf0 2) This is AVCVideoServices-32.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+\cf0 \
+Release 3/31/06\
+--------------------------\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+\cf0 1) In the TSDemuxer, fixed a bug that was introduced in AVCVideoServices-29, regarding the HDV1 "Embedded Pack Data" callback. The TSDemuxer's internal pointer to the client's HDV1 "Embedded Pack Data" callback handler was not being initialized to NULL in the auto PAT/PMT decode version of the TSDemuxer constructor. Therefore, if the client was using the auto PAT/PMT decode capability, and didn't explicitly install an "Embedded Pack Data" callback, when the TSDemuxer detected HDV1 "Embedded Pack Data" in a transport-stream packet, it would dereference a non-initialized callback pointer, and likely crash the application.\
+\
+2) This is AVCVideoServices-31.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+\cf0 \
+Release 3/17/06\
+--------------------------\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+\cf0 1) In TSPacket.cpp, clear hasAdaptationPrivateData bool before reiniting with a new packet. Pretty minor cleanup dealing with a feature added in last AVS release.\
+\
+2) In the MPEG2Receiver, added support for up receiving up to 5 TS packets in an isoch packet. Previously we only supported up to 4.\
+\
+3) In the MPEG2Receiver, added another method for passing received data to the clients, the StructuredDataPushProc. This is the 3rd supported method for passing received data up to the client (along with the default DataPushProc, and the ExtendedDataPushProc. The advantage of this new method, is that the client can receive fewer callbacks per segment of the DCL program (as few as one per segment, or as many as one for each cycle with data. Also, the structure that is passed back by the StructuredDataPushProc now includes an additional parameter, which represents the system's "UpTime" when the cycle's packet(s) were received (reported in nano-seconds, as a UInt64), with an accuracy of about 125uSec. The StructuredDataPushProc is installed using the new registerStructuredDataPushCallback(...) public member function.\
+\
+4) In the TSDemuxer, added support to pass an additional 64-bit time-stamp value in with each TS packet in the nextTSPacket(...) function. It has a default parameter value, so existing code will still be compatible with this change. Then in the PESPacketBuf struct passed up to the client when complete PES packets are demuxed, the 64-bit time-stamp associated with the first TS packet that is part of that PES packet is included. This change is made to support the new time-stamps included with the StructuredDataPushProc in the MPEG2Receiver.\
+\
+5) For the DVReceiver, made the mutex that protects the frame queue into a recursive mutex. This has the advantage that the client can now call releaseFrame(...) within the frame received callback. Note that, if the client does call releaseFrame(...) within the frame received callback, it must still return no error from the callback. Also, made a corresponding change that prevents a frame from being put back onto the free queue twice, if it is released during the frame received callback.\
+\
+6) Updated all remaining targets to native XCode targets built as universal binaries supporting both ppc and x86. Previously, only AVCVideoServices.framework was built universal.\
+\
+7) This is AVCVideoServices-30.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+\cf0 \
+Release 2/1/06\
+--------------------------\
+\
+1) Improved the DVReceiver so it wouldn't accidently receive MPEG2-TS packets (from a 61883-4 stream) into DV receive buffers. Now, a MPEG isoch stream is properly rejected by the DVReceiver.   \
+\
+2) Added new functionality to the TSDemuxer object to allow a client to register to receive callbacks containing parsed HDV1 "Embedded Pack Data". The data structure returned with this new callback also contains a pointer to the raw embedded pack data bytes. Also, updated TSDemuxerTest command-line app to display the values from this new struct, when found in a transport stream.\
+\
+3) For the HDV2 V-Aux data struct, added a pointer to the raw V-Aux data bytes, in a similar manner to the new HDV1 embedded pack data struct.  \
+\
+4) This is AVCVideoServices-29.\
+\
+Release 11/30/05\
+--------------------------\
+\
+1) For AVCDevice, added a new mutex to protect accesses to the active-stream queue. We've seen one app crash that looks like it was related to handling a bus-reset, and attempting to restore the p2p connection, at the same time a device stream object was being deleted, leading to a crash when the just-deleted device stream object is dereferenced.\
+\
+2) For AVCDevice, added new public functions, SetClientPrivateData(void *pClientData) and GetClientPrivateData(void), to allow the client to attach a pointer to arbitrary client data for a particular AVCDevice.\
+\
+3) This is AVCVideoServices-28.\
+\
+Release  11/08/05\
+--------------------------\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+\cf0 1) For AVCDevice, added vendorID, modelID, and vendorName member variables (public). Also added GetCurrentNodeID(...) member function.\
+\
+2) For MPEG2Receiver, added the ability to switch to an alternate (extended) callback, providing additional information such as access to CIP header, isoch header, and FireWire timestamps. Added a new function, registerExtendedDataPushCallback(...), to register the new alternate handler.\
+\
+3) In the command-line test app, MPEGReceiveTest, added code to use new alternate (extended) callback from MPEG2Receiver.\
+\
+4) In VirtualMPEGTapePlayerRecorder, added code to use new alternate (extended) callback from MPEG2Receiver. Also, eliminated usage of deprecated API GetTime(...), and replaced it with CFDate alternative.\
+\
+5) In VirtualTapeSubunit, control commands to change the signal format to the current signal format (i.e. results in no signal format change) are now accepted. Previously, all signal format control commands were rejected.\
+\
+6) Created a new command-line test application: AVCInfo. Basically just instantiates an AVCDeviceController and prints out the AVCDevice info for all AVC devices that were found.\
+\
+7) Created a new command-line test application: VirtualSTB, which allows the mac to emulate a Cable TV set-top-box.\
+\
+8) Added a new target to the project which builds AVS as a static library.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+\cf0 \
+9) This is AVCVideoServices-27.\
+\
+Release 9/1/05\
+---------------------\
+\
+1) For DVTransmitter, and MPEG2Transmitter, fixed a problem where the DCL program segment that branches to the overrun handler can get prematurely relinked to the next segment before we're done initializing the next segment in the DCL callback. Previously, this bug could lead to unexpected "time-stamp adjust" messages in places where we should have just had a DCL overrun, and possibly even lead to transmitting stale packets on the bus right before a DCL overrun.\
+\
+2) Made a change to the DVTransmitter's frame time-stamps (frameTransmitStartCycleTime) to provide 3-bits of the "seconds" field. Previously this time-stamp didn't contain any "seconds" bits. Also, added a new bool flag to the DVTransmitFrame structure: timeStampSecondsFieldValid. If timeStampSecondsFieldValid is true, then the 3-bits of "seconds field" in the frameTransmitStartCycleTime are known to be valid (bits 27:25). Otherwise, if timeStampSecondsFieldValid is false, the 3-bits of "seconds field" are not  guarantee to be valid. This is needed because we cannot guarantee an accurate value of the "seconds" field in the frameTransmitStartCycleTime time-stamp until the DCL program is running, and  we get our first DCL callback, because the DCL engine starts on any 1-second boundary, yet the time-stamps for frames used to prime the transmit pipe-line assume we start the DCL engine at a point where the low 3-bits of seconds-field are zero. Only frames released back to the client before the first DCL callback will have the timeStampSecondsFieldValid flag set to false. For reference, the frameTransmitStartCycleTime time-stamp contains 12 "cycle offset" bits (11:0) counting from 0 to 3071, 13 "cycle number" bits (24:12) counting from 0 to 7999, and now 3 "seconds" bits (27:25) counting from 0 to 7.\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf0 3) In the InfoPlist.strings, removed the "CFBundleGetInfoString", as requested by iMovie in radar\'ca4230242.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+\cf0 \
+4) In the DVReceiver, fixed a place where, if we had a frame-in-process when we received the start of the next frame, and also the start of the next frame was in the wrong DV mode for what the DVReceiver was initialzed for, we would not set pCurrentFrame to nil after pushing the "corrupt" frame back onto the frame-queue, possibly leading to another corrupt-frame message on a subsequent start-of-frame detection.\
+\
+5) In DVReceiver and DVTransmitter, frame buffers were previously being allocated with malloc, and freed with delete. Now they are allocated with new and freed with delete.\
+\
+6) In DVTransmitter, and MPEG2Transmitter, removed the dependency on having multiple pending DCL callbacks dispatched in order. Note that it's highly unlikely (if not impossible) for these particular callbacks to be delivered out of order, but this change just adds extra robustness, by no longer relying on the pointer to the end-of-segment cycle-object passed into the DCLCallback handler.\
+\
+7) This is AVCVideoServices-26.\
+\
+Release 8/1/05\
+---------------------\
+\
+1) For AVCDeviceController and AVCDevice, changed when the client is notified about new device arrivals. Previously, the notification to the client would \
+occur in the AVCDeviceController's deviceArrived callback, even if the capabilities of the device were not discovered (due to someone else having the\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
+\cf0 device opened when we wanted it). Now, the client device arrived notification will not occur until we've discovered the device's capabilites, which may be \
+in the AVCDeviceController's device arrived callback, or instead it may now be in the AVCDevice's serivce interest callback, after being told by IOKit that \
+the device has been closed, after which we reattempt to discover the device's capabilities.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+\cf0 \
+2) In the AVCDevice, pre-initialize the deviceName to a null string, to address the rare case where the device doesn't have a device-name in it's config-ROM. \
+Previously, if the IORegistry didn't contain a device name for the device, this variable would be left uninitialized.\
+\
+3) For both MPEG2Transmitter and DVTransmitter, changed the code to fix the problem where the first isoch packet transmitted after start erroroneously \
+contained all-zero source-packets. Now, the first isoch packet transmitted is a CIP-only, eliminating this problem.\
+\
+4) Changed the low-bitrate threshold of the MPEG2Transmitter from 100000 bps to 400000 bps, and reverted to the old method of ignoring data-rate changes \
+outside the nominal range (pre 10/8/04), which results in a better end user experience with VirtualDVHS and corrupt transport-streams.\
+\
+5) Made the .tsnavi files endian-safe when moving between i386 and PPC versions of VirtualDVHS. Now .tsnavi files are created with big-endian integers, and the MPEGTrickModes code properly does byte swapping on i386 platforms. \
+\
+6) In the AVCDeviceTest command-line test app, added retries to the openDevice() calls.\
+\
+7) This is AVCVideoServices-25.\
+\
+Release 6/27/05\
+---------------------\
+\
+1) Fixed endian issues with DV and MPEG transmitter/receiver modules, and AVCDevice module. \
+\
+2) Upgraded .xcode project file to XCode 2.1, and changed AVCVideoServices.framework target to build as a universal binary (fat). All other targets (the command-line test apps), still set to only build native. \
+\
+3) This is AVCVideoServices-24.\
+\
+Release 5/31/05\
+---------------------\
+\
+1) Fixed a mach-port leaker in AVCDeviceController, specifically, the fNotifyPort.\
+\
+2) In VirtualMPEGTapePlayerRecorder, added code to ensure that the first TS packet sent to the transmitter after a "prepare" message has the discontinuity flag set.\
+\
+3) This is AVCVideoServices-23.\
+\
+Release 5/24/05\
+---------------------\
+\
+1) For all streaming objects (DVTransmitter, DVReceiver, MPEG2Transmitter, MPEG2Receiver) added the async-callback to the run-loop to allow the force-stop callbacks to work correctly.\
+\
+2) Some cleanup work on the TSDemuxer. Should be functionally equivalent to previous version, but now has code improvements to make it easier to extended it to support demuxing additional streams withing a given program, such as a secondary audio stream, or a private-data stream. Also, changed some private member variable names for improved readability.\
+\
+3) Replaced the CFBundleShortVersionString in the info.plist, per request from the apps group. It was removed on 4/20/05, due to a misunderstanding (it only should have been removed from the InfoPlist.strings file).\
+\
+Release 5/17/05\
+---------------------\
+\
+1) Note: this is a maintenance release which includes some clean-ups for the FireWireSDK. No functional changes are included in this release.\
+\
+2) Added the missing "Apple Sample-Code License Header" to some of the source files that were missing it.\
+\
+3) Some minor tweaks to the "Embedded" build styles (used internally to Apple only!) to address some iApps requests.\
+\
+4) Fixed a build warning in one of the sample apps (MpegReceiveTest.cpp).\
+\
+5) Updated AVCVideoServices.doc. \
+\
+Release 5/01/05\
+---------------------\
+\
+1) In AVCDevice, added robustness code to StartAVCDeviceStream, and StopAVCDeviceStream which validates the passed in AVCDeviceStream object, to make sure it's valid. This prevents a crash if the client app passes in a bad (or stale) pointer.\
+\
+2) Note: this is the version of AVS slated for inclusion in FireWireSDK20.\
+\
+Release 4/20/05\
+---------------------\
+\
+1) Removed the CFBundleShortVersionString from the plists to comply with new B&I verification requirements.\
+ \
+2) In AVCDevice, added GetPowerState(), and SetPowerState() functions to support the AV/C POWER status and control type commands.\
+\
+3) Added new PanelSubunitController module to support channel changes in CEA-931 based devices (cable STB tuners, etc.).\
+\
+4) In DVReceiver, added timer-based no-data callback notification capability similar to what was recently added to the MPEG2Receiver. \
+\
+5) In VirtualMPEGTapePlayerRecorder, made a change so that when the MPEG2Receiver is started in broadcast mode (no p2p connection) it doesn't allocate an isoch channel.\
+\
+6) In VirtualTapeSubunit, made the internal connections between the subunit and the unit plugs "permanent" so that they cannot be torn down by another device sending a AV/C DISCONNECT command. This is to address a problem seen with a recent HDTV.\
+\
+7) In VirtualMusicSubunit, made a code-change to get it to build successfully with gcc 4.0.\
+\
+Release 3/2/05\
+---------------------\
+\
+1) Fixed mach-port leaks due to not releasing iterators in AVCDeviceController.cpp, and AVSCommon.cpp.\
+\
+2) Fixed mach-port leaks due to not releasing IORegistry objects on hot-plug events in AVCDevice.cpp. \
+\
+3) Fixed mach-port leaks due to the creation of pthreads with "joinable" attribute in CreateAVCDeviceController(), CreateVirtualMusicSubunit(), and CreateVirtualTapeSubunit(), as well as all MPEG & DV streaming objects. Now all these pthreads are created as "detachable" instead.\
+\
+4) In MPEGTrickModes, changed the NaviFileCreator, and NaviFileWriter classes to not count video PES packets as frames unless a picture header is found. This is to work around a "non-compliance" issue in the LG LST-3410 hard-disk based PVR.\
+\
+5) In PSITables.h, changed the value used for the kReservedPID constant to another reserved PID value. Was 0xF, now is 0xE. This is to work around a "non-compliance" issue in the LG LST-3410 hard-disk based PVR.\
+\
+6) In VirtualMPEGTapePlayerRecorder.cpp, added support to change the broadcast isoch channel for recording and playback. Previously was fixed at 63. It now can be changed by the client application.\
+\
+7) In VirtualMusicSubunit.cpp, fixed some AV/C response for the Stream-Format-Information command. This fixes the "missing MIDI port" problem with the VirtualMusicTest comman-line application.\
+\
+8) In VirtualTapeSubunit.cpp, added a delay of 25msec before every AV/C response generated to work-around a problem with device control seen with the Sharp LCD HDTVs.\
+\
+9) Fixed a crasher problem seen in AVCDeviceTest command-line test app during PlugOMatic testing, due to a StringLogger object being created on the stack, instead of globally.\
+\
+Release 1/21/05\
+-----------------------\
+\
+1) In the MPEG2Receiver, added mutex protection around the starting and stopping of the new no-data callback timer. Also, in the DCL callback, if we get a non 61883-4 compliant packet, we no longer stop and restart the DCL program. Instead, we make sure we notify the client only once per DCL segment of the bad-packet, then just drop the bad packet on the floor. This is a fix for radar 3961028, and a work-around for radar 3957961.\
+\
+2) More work on FireWireAudio, VirtualMusicSubunit, and VirtualMusicTest. The VirtualMusicTest app can now be used somewhat successfully, and an attached system running 10.3.7 or later will be able to detect it as a AV/C music device, and stream firewire audio between the two macs.  \
+\
+Release 12/22/04\
+------------------------\
+\
+1) For the MPEG2Receiver's no-data callback (added in previous release), this new version uses a timer, instead of the CIP-only counting method used in the previously. This change allows for detection of the no-stream case in addition to the previously support CIP-only stream detection. Also, updated the MPEGReceiveTest app to show a usage of this new API.\
+\
+2) Fixed a build problem with the test app CreateTSNavi.\
+\
+3) In the AVCDevice object, we now detect digital-8 devices (NTSC or PAL) properly as DV25 devices. I had observed that some older Digital-8 devices reported a tape-subunit input/output mode of something other than DV25 when the tape is not playing.\
+\
+4) Added a new module to the TestApps sources FireWireAudio. This module simplifies the use of the AppleFWAudio user-client for apps which use the VirtualMusicSubunit object.\
+\
+5) More changes to VirtualMusicSubunit object, and the VirtualMusicTest app. Now, a Mac running VirtualMusicTest connected to another Mac can do Mac-to-Mac FireWire audio. Note that on-the-fly sample-rate changes are not yet working properly.\
+\
+Release 12/07/04\
+------------------------\
+\
+1) For the AVCDevice object, added a mutex around the open and close operations to prevent the case of simultaneously opening and closing on two different threads.\
+\
+2) When using AVCDevice's CreateMPEGTransmitterForDevicePlug() function, if AVS determines that the AVCDevice's mpegMode is HDV1_50 or HDV1_60, it will constrain the speed of the isoch transmit packets to a maximum of S200. This is to prevent an interop problem we've seen when exporting to the JVC camcorders from a Q78.\
+\
+3) For the MPEG2Receiver object, added a new API for registering a no-data callback. If the client registers this callback (specifying a callback function, and a time in msec), the MPEG2Receiver will call the client's no-data callback if a CIP-only stream is received for the specified number of msec.\
+\
+4) For the MPEG2Transmitter, fixed the FDF field in the generated CIP headers. The value should be 0x00, but AVS had been stuffing 0x80 in this field. Note: No problem has ever been seen with the incorrect FDF value, but I wanted it to be correct.\
+\
+5) In the VirtualTapeSubunit object, made a couple of private helper functions into statics.\
+\
+6) Added a new module VirtaulMusicSubunit, and a test app VirtualMusicTest. These are still a work-in-progress, but eventually will provide the code needed to have one Mac recognize another Mac as a FireWire audio device. \
+\
+Release 11/24/04\
+------------------------\
+\
+1) Added a #define (within a #ifndef) to AVCDevice.cpp for the symbol kIOFireWireAVCLibUnitInterfaceID_v2. This is because some systems that started with 10.3.0, then updated with Software Update don't have the newest IOFireWireAVC headers that contain this new constant, and are getting build failures with trying to build AVCVideoServices-12.\
+\
+2) Another change to MPEGTrickModes to prevent a crash in the NaviFileReader when processing a zero-length navi file.\
+\
+Release 11/23/04\
+------------------------\
+\
+1) Made a one-line change to AVCDevice that results in all calls to AVCCommand(...) returning 8 msec faster than previous versions of AVS, when running on Panther (or newer) OS  versions. In Jaguar (or possibly before), in the AVCCommand(...) function provide by IOFireWireAVCLibUnit, an 8 msec sleep-delay was added before returning in order to prevent applications from issuing AV/C commands to devices too fast. An external developer complained that he was being penalized by this delay, and was unable to issue AV/C commands fast enough to his device for his needs. So, in Panther, a new UUID was created for retrieving a "version 2" of the IOFireWireAVCLibUnit interface, and the version 2 interface no longer has this 8 msec delay penalty. I've now updated AVCVideoServices to use this new "version 2" interface if its available. If AVS cannot get the "version 2" interface (running on Jaguar, for example), then it reverts to the original IOFireWireAVCLibUnit interface (with the delay penalty). Note that this change will affect AV/C command timing, and users should ensure that they are not over-stressing their target devices by sending AV/C commands too fast.    \
+\
+2) More changes to VirtualTapeSubunit, VirtualMPEGTapePlayerRecorder, and MpegTrickModes. This is the version of AVS that was included in the new release of VirtualDVHS, version 2.03.\
+\
+Release 11/19/04\
+------------------------\
+\
+1) Another change to PSITables to improve the handling of streams coming from a HDV camcorder in trick-play mode. In the previous version, the table extractor was modified to continue to parse PMT tables until both audio and video PIDs were discovered. Now we also continue to parse PAT tables until both audio and video PIDs are discovered, because we found that the PAT table's program PMT PID would also change when the camcorder switched from trick-play to normal play.\
+\
+2) More changes to VirtualTapeSubunit, VirtualMPEGTapePlayerRecorder, and MpegTrickModes. This is the version of AVS that was included in the new release of VirtualDVHS, version 2.02.\
+\
+Release 11/15/04\
+------------------------\
+\
+1) Made a change to PSITables.cpp to continue to parse all PMT tables until both the audio and video PIDs have been identified. We found that when an HDV camcorder is in a trick-play mode the PMT only contains a video PID, not an audio PID. Previously, if you were to start the TSDemuxer (in auto-PSI-parsing mode) while the HDV camcorder was in a trick-play mode, the TSDemuxer would parse the PMT without audio, and would never find the audio PID once it became available in the stream (since the version number of the PMT table doesn't change, even though the contents do change when it transitions back to normal play mode).\
+\
+2) MPEGTrickModes is now part of the framework. Previously it was only part of the TestApps. Also, made numerous fixes and improvements to this module.\
+\
+3) Changed the names of the internal-use functions in AVSCommon to fix a capitalization error. Also fixed all internal objects that call these functions.\
+\
+4) For the VirtualTapeSubunit object, fixed the setPlugParameters(...) function, and improved the AV/C command handler to support SEARCH_MODE status command and PLUG_INFO status command.\
+\
+5) Created a new object VirtualMPEGTapePlayerRecorder, and added it to AVCVideoServices.framework. This class object uses the VirtualTapeSubunit, MPEG2Transmitter, MPEG2Receiver, and various MPEGTrickModes objects to implement VirtualDVHS type functionality. Also added a new command-line TestApp, VirtualDVHS, for testing this new  VirtualMPEGTapePlayerRecorder object.\
+\
+6) In the TestApps source, added CreateTSNavi, a command-line application that parses a MPEG2-TS file and generates a navigation file for doing random-access, and accurate time-code. The created .tsnavi files are used by the MPEGTrickModes file reader, and are used by VirtualMPEGTapePlayerRecorder.\
+\
+Release 11/02/04\
+------------------------\
+\
+1) Created and added the new VirtualTapeSubunit object to AVCVideoServices.framework. This new object allows clients of AVCVideoServices to easily support VirtualDVHS type functionality in their applications. \
+\
+2) In the TestApps source, added SimpleVirtualMPEGTapePlayer object. This class is an example of one simple way to use both a VirtualTapeSubunit object and a MPEG2Transmitter object together to create a playback only VirtualDVHS. \
+\
+3) In the TestApps source, added VirtualTapeTest. This command-line application shows how to use an AVCDeviceController object to find a connected TV or STB, and create a SimpleVirtualMPEGTapePlayer for interaction with that device. The name of the source MPEG2-TS file is passed on the command line.\
+\
+4) In the TestApps source, added MPEGTrickModes, which contains some support classes and functions for reading and writing MPEG2-TS files along with special navigation-assist files. When a TS file and a .navi file are used together, the client app can skip around in the TS file, as well as determine frame-accurate time-code.\
+\
+5) The AVCDevice object has a new public member variable, "hasMonitorOrTunerSubunit", which allows for quick identification of TVs and STBs.\
+\
+6) Eliminated calls to obsolete function MKGetTimeBaseInfo(...), and replaced with the newer mach_timebase_info(...).\
+\
+7) Made a change to the MPEG2Transmitter object to help in the case where the PSI tables change in a stream, but the table version numbers don't. Previously, once we had detected a valid PAT and PMT, we never would re-parse subsequent tables in the stream unless we detected that the table version numbers had changed. Now, if we go 10,000 TS packets in a row without finding the next PCR, we assume that our PSI tables are stale, and reset the PSITables object to search for a new PAT/PMT.\
+\
+8) Made a change to the TSDemuxer object to help in the case where the PSI tables change in a stream, but the table version numbers don't. Previously, once we had detected a valid PAT and PMT, we never would re-parse subsequent tables in the stream unless we detected that the table version numbers had changed. Now, if we go 10,000 TS packets in a row without performing a TSDemuxer client callback (delivery of a frame, etc.), we assume that our PSI tables are stale, and reset the PSITables object to search for a new PAT/PMT.\
+\
+9) Added a new member function to the PSITables object, ResetPSITables(), to support the re-detection of PAT/PMT.\
+\
+10) Added a new member function to the TSDemuxer object, SetDemuxerConfiguratuionBits(...), which allows the client to configure the demuxer for some special modes. Currently, two new modes are supported, kDemuxerConfig_PartialDemux (which only copies data from the first 3 TS packets of each frame into the PES buffer), and  kDemuxerConfig_KeepTSPackets (which additionally stores all the raw TS packets associated with a PES in an array that is part of the PESPacketBuf structure).\
+\
+Release 10/8/04\
+----------------------\
+\
+1) Switched to .xcode project file, and switched AVCVideoServices.framework to a native xcode target\
+\
+2) For TSDemuxer, made the following changes to HDV2VAux parsing:\
+	a - added new ttc_df field to struct\
+	b - added new rec_st field to struct\
+	c - added new atn_bf field to struct\
+	d - added one more bit to calculation of sourceFrameRate\
+	e - fixed problem of TNMN (tens of month) not being factored into the recDate_month\
+\
+3) The MPEG2Transmitter has always had code to prevent erroneously low bit-rate calculations from stalling the transmitter. These erroneously low bit-rates may occur due to a discontinuity in the stream, or a packet error. Previously, when the code calculated a bit-rate that seemed to low to be real, it ignored the bit-rate change, and used the previously calculated bit-rate. Also, the low bit-rate threshold was set at 1504000 bps. Now, I've dropped this low bit-rate threshold down to 100000 bps. And, if I ever calculate a bit-rate lower than this threshold, instead of using the previously calculated bit-rate, I now use the low-threshold value as the bit rate for those packets. This should make the transmitter more accurate for low-bit-rate portions of variable bit-rate streams, while still providing some stall protection.\
+\
+Release 9/15/04\
+----------------------\
+\
+1) Made changes to the PSITables object to save a copy of the primary program's PMT descriptors, including the program descriptors, and elementary-stream descriptors for its primary video and audio streams.\
+\
+2) Made the TSDemuxer's psiTables member variable a public. Previously, this variable was private. This change gives clients access to the new PMT descriptors storing capability of the PSITables object. Note:  clients of the TSDemuxer should only access this variable during callbacks for PES and PSI delivery. Or, when no other thread is calling nextTSPacket(...).\
+\
+3) Added a pointer to the TSDemuxer instance into the PES data-struct. This makes it easier in the PES delivery callback handler to call TSDemuxer functions such as ReleasePESPacketBuf(...), or to access the public TSDemuxer variables, such as the psiTables variable.\
+\
+4) Made changes to TSDemuxerTest command-line application to show how to access the PMT descriptors.\
+\
+Release 9/13/04\
+----------------------\
+\
+1) Added a new message callback feature for AVCDeviceController. It's called the globalAVCDeviceMessageProc, and it is part of the AVCDeviceController object. The client callback is specified as a parameter of the AVCDeviceController constructor (or, more likely, in the call to the CreateAVCDeviceController(...) ). They has a default parameter, so it is backward compatible with all existing code. The prototype for this new callback is identical to the existing message notification callback provided by the AVCDevice object, when calling openDevice(...). However, this new globalAVCDeviceMessageProc is called with messages from all AVCDevice objects in the AVCDeviceController's device array, whether the device is opened or not. If you use use this new message callback feature provided by AVCDeviceController, you may opt to no longer use the similar capability provided by any individual AVCDevice object when you call openDevice(...) on it. Just pass in NULL, or call openDevice(), with zero arguments instead. Or, you can continue to also use the callback provided when opening an AVCDevice, but then you will get two callbacks, first, the callback registered with AVCDevice's openDevice function, then the globalAVCDeviceMessageProc. Just a bit of new added flexibility.\
+\
+Release 9/10/04\
+----------------------\
+\
+1) In the TSDemuxer, added the ability to pass a 32-bit time-stamp with each TS packet into the nextTSPacket(...) member function. Then, in the PES available callback to the client, the time-stamp corresponding to the first TS packet that is part of the PES packet is passed back in the PES packet data-structure. Also, modified TSDemuxerTest application to show a use of this new feature. Note, that the new passed in parameter has a default argument, so this new feature doesn't require changes to existing code.\
+\
+Release 8/25/04\
+----------------------\
+\
+1) Added mpegMode member variable to the AVCDevice object. If the member variable isMPEGDevice is true, this variable will be set to the specific variant of MPEG device.\
+\
+2) Improved the list of device signal modes in TapeSubunitController.h to include new HDV modes, and Panasonic DVCPro variants.\
+\
+3) Changed the device capability discovery code to use the new enum defines from TapeSubunitController.h\
+\
+3) Added new macro MPEGstandard(a), and new defines kVideoStandard60 and kVideoStandard50, to go along with the existing DVstandard(a) macro.\
+\
+4) Fixed a potential crash when CreateMPEGTransmitter, CreateMPEGReceiver, CreateDVTransmitter, or CreateDVReceiver function fails to create the streaming object.\
+\
+5) In the TapeSubunitController object, changed the API for GetTransportState(...), to return a bool specifying if the transport state is stable or in transition.\
+\
+6) Fixed a bug introduced in the 8/02/04 release version of the TSDemuxer, dealing with HDV2 VAux callback.\
+\
+Release 8/02/04\
+----------------------\
+\
+1) AVCDeviceController: Changed the prototype for the client callback, 
+\f1\fs20 \CocoaLigature0 AVCDeviceControllerNotification, 
+\f0\fs24 \CocoaLigature1 to include a pointer to the device of interest that is the result of the callback. Now, this callback will be called for each device discovered, which should simplify the client's implementation of this function. This change will require all client apps to be updated!\
+\
+2) TSDemuxer: Changed the prototype for the client callback, 
+\f1\fs20 \CocoaLigature0 TSDemuxerCallback, 
+\f0\fs24 \CocoaLigature1 to include a message specifying the "reason" for the callback. This allows for the reporting of error conditions such as discontinuity errors, which were previously unreported. The possible values for the message parameter are specified in the 
+\f1\fs20 \CocoaLigature0 TSDemuxerMessage 
+\f0\fs24 \CocoaLigature1 enum. This change will require all client apps to be updated!\
+\
+3) TSDemuxer: Added support for receiving and parsing HDV2 V-Aux data-blocks. There is a new public member function, 
+\f1\fs20 \CocoaLigature0 InstallHDV2VAuxCallback, 
+\f0\fs24 \CocoaLigature1 used to install a callback to receive the parsed data structure.\
+\
+4) TSDemuxer: Added a new public member function, 
+\f1\fs20 \CocoaLigature0 Flush, 
+\f0\fs24 \CocoaLigature1 to manually flush the PES buffers. This is needed to flush-out any PES data that hasn't been delivered to the client. \
+\pard\tx480\tx960\tx1440\tx1920\tx2400\tx2880\tx3360\tx3840\tx4320\tx4800\tx5280\tx5760\tx6240\tx6720\tx7200\tx7680\tx8160\tx8640\tx9120\tx9600\tx10080\tx10560\tx11040\tx11520\tx12000\tx12480\tx12960\tx13440\tx13920\tx14400\tx14880\tx15360\tx15840\tx16320\tx16800\tx17280\tx17760\tx18240\tx18720\tx19200\tx19680\tx20160\tx20640\tx21120\tx21600\tx22080\tx22560\tx23040\tx23520\tx24000\tx24480\tx24960\tx25440\tx25920\tx26400\tx26880\tx27360\tx27840\tx28320\tx28800\tx29280\tx29760\tx30240\tx30720\tx31200\tx31680\tx32160\tx32640\tx33120\tx33600\tx34080\tx34560\tx35040\tx35520\tx36000\tx36480\tx36960\tx37440\tx37920\tx38400\tx38880\tx39360\tx39840\tx40320\tx40800\tx41280\tx41760\tx42240\tx42720\tx43200\tx43680\tx44160\tx44640\tx45120\tx45600\tx46080\tx46560\tx47040\tx47520\tx48000\ql\qnatural
+\cf0 \
+5) MPEG2Receiver: Fixed a hang-condition that can occur if an isoch packet is received that has an illegal packet length.\
+\
+6) AVCDevice: Fixed problem where notification port wasn't getting released in the AVCDevice desctructor.\
+\
+7) Added a new TapeSubunitController object, which supports a high-level interface for sending AV/C tape-subunit commands to a device.\
+\
+8) Added a new AVCDeviceCommandInterface object, which allows for the sending of AV/C commands to a device without requiring an open on the device first.\
+\
+9) Updated test apps due to changes in the AVCDeviceController and TSDemuxer callbacks.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+\cf0 \
+\
+Release 6/03/04\
+----------------------\
+\
+1) Made changes to the DVTransmitter to allow DVCProHD streams to transmit with a SYT offset of 6, instead of the usual 3.\
+\
+2) Changed the DVTransmitter to make up "lost-cycles" after a long-bus-reset or short-packet incident, by eliminating one or more CIP-only packets in a future frame.\
+\
+3) Fixed problem in AVCDevice.cpp with build-time conditional to bypass capability discovery after disconnection/reconnection.\
+\
+4) Converted all "named" enums to "un-named" enums, and created typedefs for the old names (as unsigned int). This is to fix a binary compatibility problem that can arise with applications that are built with the -fshort-enums GCC flag.\
+\
+5) The helper-functions CreateAVCDeviceController, CreateDVTransmitter, CreateDVReceiver, CreateMPEG2Transmitter, and CreateMPEG2Receiver now sleep for 1 msec while polling for their dedicated threads to be "ready".\
+\
+6) Fixed PSITables and TSDemuxer objects to not dereference the passed-in Stringlogger object if it is nil.\
+\
+\
+Release 4/09/04\
+----------------------\
+\
+1) Made a change to the DVTransmitter and MPEG2Transmitter objects. When the end-of-segment DCL callback detects a discrepancy between what the actual end-of-segment DCL time-stamp value is, and what it was expected it to be, it will now post a message back to the client with the new 
+\f1\fs20 \CocoaLigature0 kMpeg2TransmitterTimeStampAdjust 
+\f0\fs24 \CocoaLigature1 message (for MPEG2), or 
+\f1\fs20 \CocoaLigature0 kDVTransmitterTimeStampAdjust 
+\f0\fs24 \CocoaLigature1 message (for DV). The param1 and param2 parameters of the message callback contain the expected time-stamp cycle-number, and the actual time-stamp cycle number, respectively. There are two basic reasons why a time-code discrepancy may occur, one is due to a cycle lost due to long bus-reset, the second is due to fact that we had a re-transmission of a packet due to packet transmission failure (G5 "short" packet issue). Other than the posting of this new message to the client, the old functionality of sending a log message to the StringLogger, and adjusting the expected value for future calculation of SYT time-stamps (DV), or source-packet-headers (MPEG2) remains intact. This new feature could be used to detect the short packet problem occurred, for possible "corrupt-frame" reporting to the user, when transmitting to a device that cannot properly deal with the occasional short packet. Unfortunately, this code cannot determine the difference between a long bus-reset related time-code discrepancy and a short packet related one.\
+\
+\
+Release 4/08/04\
+----------------------\
+\
+1) Fixed a bug in TSDemuxer.cpp, where, for the alternate constructor, the two class callback refcons weren't being initialized.\
+\
+\
+Release 4/01/04\
+----------------------\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf0 1) When breaking a p2p connection with a device, we also clear the broadcast bit in the device's plug register. This change is needed due to some somewhat incorrect behavior of the HD1200A DVCProHD device, but is an ok thing to do for all devices.\
+\
+2) For the DVTransmitter object, changed the way the DCL overrun is handled to simplify the client's code. It still does a stop-cleanup-restart operation, but how it interacts with the client during this procedure is different.\
+\
+The old way:\
+\
+	A - Post a 
+\f1\fs20 kDVTransmitterPreparePacketFetcher 
+\f0\fs24 message to the DVTransmitter's message proc. The client would just need to assume that this was due to a DCL overrun condition, since it wasn't currently in the process of calling start(), and would have to take back any DVTransmitFrame objects that were currently owned by the DVTransmitter (at most one for the current design), and add it back to the client's queue (i.e. the frame was auto-released, without calling the registered frame-release callback). \
+\
+	B - Begin pulling frames from the client to restart the transmitter.\
+\
+The new way:\
+\
+	A - If the DVTransmitter has hold of a frame that it got from the client's registered frame pull-proc (at most one for the current design), it will call the client's registered frame-release callback for this frame (release as normal). If the first block of that frame has already been added to the DCL transmit buffers, the 
+\f1\fs20 frameSYTTime 
+\f0\fs24 and
+\f1\fs20  frameTransmitStartCycleTime 
+\f0\fs24 will reflect actual time-stamps, otherwise these fields will be set to zero.\
+\
+	B - Post a 
+\f1\fs20 kDVTransmitterDCLOverrun 
+\f0\fs24 message to the DVTransmitter's message proc. Note that this is a new message for this release.\
+\
+	C - Begin pulling frames from the client to restart the transmitter.\
+\
+\
+Release 3/19/04\
+----------------------\
+\
+1) Fixed a problem where when a stream is active with a p2p connection to a device, and we get a bus reset, the re-establishment of the p2p connection happens to the correct plug. In previous versions I had it backward, where if we were transmitting, I would re-establish the connection to the device's output plug, and if we were receiving, I would re-establish the connection to the device's input plug. This wouldn't cause a problem when working with VirtualDV, but will cause a problem with real decks. This probably explains why we occasionally would see the deck start transmitting when we were simultaneously transmitting to it.\
+\
+2) Made the AVCDevice calls to create transmit/receive DV/MPEG streams more robust, so they will not cause a  crash if the AVCDevice had not previously been opened.\
+\
+3) Added a 500 msec delay in openDevice and closeDevice, to work around the 
+\f1\fs20 IOCreatePlugInInterfaceForService
+\f0\fs24  failure when repeatedly opening and closing. This delay can be removed at build-time by commenting out the 
+\f1\fs20 \cf2 kAVS_Delay_AVCDevice_Open_And_Close 
+\f0\fs24 \cf0 in AVCVideoServices.h. I'm still working on a long-term solution for this problem, but this delay seems to help. \
+\
+4) Fixed the return error code when openDevice fails to open. Was returning the return value of release(), instead of the real open failure error code.\
+\
+5) Changed the order of tear-down of the device interfaces in closeDevice(). The openDevice() function first creates the AVC interface, then the FW device interface, so now the closeDevice() function releases the FW device interface before the AVC interface.\
+\
+\
+Release 3/15/04\
+----------------------\
+\
+1) Conditional code around the rediscovery of AVC device capabilities after replug. The rediscovery of device capabilities is currently disabled, to work-around a problem with the current IDH, where, if the AVS code opens the device to rediscover it's capabilities, while the IDH has been previously using the device, the IDH will crash in IDHGetDeviceTime(). This feature can be re-enabled by commenting out the #define of in AVCVideoServices.h that bypasses this feature (
+\f1\fs20 \cf3 kAVS_Bypass_AVCDevice_Rediscovery)
+\f0\fs24 \cf0 . Ultimately, I intend to attempt to fix the IDH to not crash when the two components conflict, and then re-enable this feature.\
+\
+2) Implementation of the force-stop handler for DV/MPEG transmitter and receiver objects. This allows the streams to automatically restart after sleep/wake. \
+3) Fixed some minor log message copy/paste errors.\
+\
+\
+Release 2/03/04\
+----------------------\
+\
+1) Improved robustness in stream object's start and stop routines to prevent misuse of these functions (i.e. - calling stop when not running).\
+\
+2) Improved handling of finalize callback (sleep the thread and only poll each millisecond, and better handling of finalize callback flag).\
+\
+3) Fixed a small deadlock that could happen if DCL overrun happens during the time the stream object is running its stop function.\
+\
+4) Made sure that, if we receive a DCL callback after the finalize callback, it won't cause a problem. This should never happen with recent versions of IOFireWireFamily, but it's nice to be safe.\
+\
+5) For the DVTransmitter, I added a new parameter to the frame structure, "frameTransmitStartCycleTime". This is just the frame's SYT time, minus the cycle offset (since SYT time is always a fixed number of cycles ahead of the actual transmit cycle).\
+\
+\
+Release 1/15/04\
+----------------------\
+\
+AVCDevice\
+\
+	1) Detect more MPEG devices based on alternate responses to "Get Signal Mode" AV/C command.\
+	\
+	2) Fixed bug where device client wasn't getting messages back from managed MPEG2Receiver stream\
+\
+DVReceiver\
+\
+	1) Switched Frame Queue and Notify-Client Queue over to STL deque objects.\
+	\
+	2) Released DV frames now put on end of Frame-Queue. Previously they were put on the head of the queue.\
+	\
+	3) Added missing dropped-frame notifications.\
+	\
+	4) Fixed bug in RemotePort_ReleasePort(...) that was sending clients the wrong message. Was causing P2P connections in AVCDevice's managed streams to not get broken when they should.\
+\
+DVTransmitter\
+\
+	1) Changes in FillCycleBuffer(...) to not calculate SYT time-stamps for cycles that didn't need them.\
+\
+	2) Added conditional-build code (currently disabled) to measure DCL callback time, for future performance tuning.\
+\
+MPEG2Receiver\
+\
+	1) Fixed bug in RemotePort_ReleasePort(...) that was sending clients the wrong message. Was causing P2P connections in AVCDevice's managed streams to not get broken when they should.\
+\
+\
+Release 11/12/03\
+------------------------\
+\
+1) Mutex protection used in all transport control code (start/stop) to prevent the race condition that can occur if we are processing a DCL overrun at the same time the client is trying to manually stop the running DCL.\
+\
+2) Fixed up the circular header dependancy that Sean found.\
+\
+3) Added a new public member  to the MPEG2Receiver object, "ReceiveSourcePacketHeaders(bool wantSPH)". If this function is called with a parameter of "true", then then all subsequent TS  packet receive callbacks will include pointers to the 192 byte source packets, instead of the 188 byte transport stream packets. The source packet contains a 4-byte header prepended to the transport stream packet. This 4-byte header is a 32-bit timestamp, similar to the SYT fields present in the CIP headers of DV packets (except for more bits). The default functionality is the same as before, so if you don't need access to the source packet headers, you don't need to call this function. This was done as a request from an external developer who intends to use these source-packet headers for synchronization of the PCRs.\
+\
+\
+Release 11/12/03\
+------------------------\
+\
+Initial release for tracking changes. (no change summary for any previous versions).}
